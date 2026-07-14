@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMI Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F0F4F1;
+    --surface: #FFFFFF;
+    --ink: #16241D;
+    --ink-soft: #55685D;
+    --line: #C9D6CD;
+    --accent: #1F6F54;
+    --accent-soft: #E4EEE7;
+
+    --z-under: #4A90D9;
+    --z-normal: #2E9E5B;
+    --z-over: #E0A030;
+    --z-obese: #D6553D;
+
+    --z-under-bg: #E7F0FA;
+    --z-normal-bg: #E5F5EB;
+    --z-over-bg: #FBF0DD;
+    --z-obese-bg: #FBE7E3;
+  }
+
+  [data-theme="dark"]{
+    --bg: #101712;
+    --surface: #182019;
+    --ink: #E9F1EC;
+    --ink-soft: #8EA398;
+    --line: #2B3A32;
+    --accent: #4FCB9B;
+    --accent-soft: #1E2C24;
+
+    --z-under: #6FA9E6;
+    --z-normal: #4FCB9B;
+    --z-over: #E8B856;
+    --z-obese: #E27A63;
+
+    --z-under-bg: #1B2833;
+    --z-normal-bg: #1A2E24;
+    --z-over-bg: #2E2A1A;
+    --z-obese-bg: #2E1E1A;
+  }
+
+  body, .panel, .bmi-category, .unit-toggle button{
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding: 48px 20px;
+  }
+
+  .page{
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  h1{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.01em;
+  }
+
+  .header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap: 16px;
+  }
+
+  .theme-toggle{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background: var(--accent-soft);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor:pointer;
+    flex-shrink: 0;
+  }
+
+  .theme-toggle svg{ width:14px; height:14px; }
+
+  .sub{
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin-bottom: 36px;
+  }
+
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* vertical ruler — signature element */
+  .ruler-col{
+    background: var(--accent-soft);
+    border-right: 1px solid var(--line);
+    position: relative;
+    padding: 28px 0;
+    display:flex;
+    justify-content:center;
+  }
+
+  .ruler{
+    position: relative;
+    width: 34px;
+    height: 100%;
+    min-height: 380px;
+  }
+
+  .ruler-fill{
+    position:absolute;
+    bottom:0;
+    left: 6px;
+    width: 22px;
+    background: linear-gradient(180deg, var(--accent), #2a8a67);
+    border-radius: 4px;
+    transition: height 0.15s ease;
+  }
+
+  .ruler-ticks{
+    position:absolute;
+    inset:0;
+  }
+
+  .tick{
+    position:absolute;
+    left: 0;
+    width: 34px;
+    display:flex;
+    align-items:center;
+  }
+
+  .tick .line{
+    height:1px;
+    background: var(--ink-soft);
+    opacity: 0.45;
+  }
+
+  .tick.major .line{ width: 16px; opacity:0.7; }
+  .tick.minor .line{ width: 8px; }
+
+  .tick .label{
+    position:absolute;
+    left: 20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--ink-soft);
+    white-space:nowrap;
+  }
+
+  .content{
+    padding: 32px 36px;
+  }
+
+  .field{
+    margin-bottom: 26px;
+  }
+
+  .field-head{
+    display:flex;
+    justify-content:space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .unit-toggle{
+    display:inline-flex;
+    background: var(--accent-soft);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .unit-toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+  }
+
+  .unit-toggle button.active{
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .feet-row{
+    display:flex;
+    gap: 14px;
+    margin-top: 4px;
+  }
+
+  .feet-field{
+    flex:1;
+  }
+
+  .feet-field .sub-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  .field-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  .field-value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .field-value span{
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-left: 3px;
+  }
+
+  input[type="range"]{
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--line);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width: 20px;
+    height: 20px;
+    border-radius:50%;
+    background: var(--accent);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--accent);
+    cursor:pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 20px;
+    height: 20px;
+    border-radius:50%;
+    background: var(--accent);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--accent);
+    cursor:pointer;
+    border:none;
+  }
+
+  .divider{
+    height:1px;
+    background: var(--line);
+    margin: 30px 0 26px 0;
+  }
+
+  .result-row{
+    display:flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .bmi-number{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .bmi-category{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .silhouette-wrap{
+    flex-shrink: 0;
+    display:flex;
+    align-items:flex-end;
+    padding-bottom: 4px;
+  }
+
+  #silhouetteBody{
+    transform-origin: 30px 100px;
+    transition: transform 0.25s ease;
+  }
+
+  .ideal-weight{
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 22px;
+  }
+
+  .ideal-weight strong{
+    color: var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+
+  /* horizontal tape gauge — echoes the vertical ruler */
+  .gauge{
+    position: relative;
+    padding-top: 14px;
+  }
+
+  .gauge-track{
+    position: relative;
+    height: 14px;
+    border-radius: 7px;
+    overflow: hidden;
+    display:flex;
+  }
+
+  .gauge-track div{ height: 100%; }
+
+  .gauge-ticks{
+    display:flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+
+  .gauge-labels{
+    display:flex;
+    margin-top: 10px;
+  }
+  .gauge-labels div{
+    flex:1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-align:center;
+    color: var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .marker{
+    position:absolute;
+    top: -8px;
+    width: 2px;
+    height: 30px;
+    background: var(--ink);
+    transition: left 0.15s ease;
+  }
+  .marker::after{
+    content:'';
+    position:absolute;
+    top:-6px;
+    left:50%;
+    transform: translateX(-50%);
+    width:0;
+    height:0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 7px solid var(--ink);
+  }
+
+  footer{
+    text-align:center;
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .section-gap{ height: 28px; }
+
+  .panel-plain{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 32px;
+  }
+
+  .panel-plain-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom: 22px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .panel-plain h2{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .metabolic-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1.3fr;
+    gap: 24px;
+    align-items:start;
+  }
+
+  select{
+    width:100%;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 10px;
+  }
+
+  .metabolic-results{
+    display:flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .metabolic-number{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 34px;
+    font-weight: 700;
+    margin: 6px 0 2px 0;
+  }
+
+  .metabolic-unit{
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .log-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 20px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  .history-empty{
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .history-chart{
+    display:flex;
+    align-items:flex-end;
+    gap: 6px;
+    height: 120px;
+    padding-top: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .history-bar-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    flex: 1;
+    min-width: 18px;
+    height: 100%;
+    justify-content:flex-end;
+    gap: 4px;
+  }
+
+  .history-bar{
+    width: 100%;
+    max-width: 26px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.2s ease;
+  }
+
+  .history-bar-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 700px){
+    .metabolic-grid{ grid-template-columns: 1fr; gap: 20px; }
+  }
+
+  @media (max-width: 560px){
+    .panel{ grid-template-columns: 60px 1fr; }
+    .content{ padding: 24px 20px; }
+    .bmi-number{ font-size: 44px; }
+    .panel-plain{ padding: 22px 18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header-row">
+    <div>
+      <div class="eyebrow">Body measurement tool</div>
+      <h1>BMI Calculator</h1>
+    </div>
+    <button type="button" class="theme-toggle" id="themeToggle">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      <span id="themeLabel">Light</span>
+    </button>
+  </div>
+  <div class="sub">Enter your height and weight to find your Body Mass Index.</div>
+
+  <div class="panel">
+    <div class="ruler-col">
+      <div class="ruler" id="ruler">
+        <div class="ruler-fill" id="rulerFill"></div>
+        <div class="ruler-ticks" id="rulerTicks"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">Height</span>
+          <span class="unit-toggle">
+            <button type="button" id="unitCm" class="active">cm</button>
+            <button type="button" id="unitM">m</button>
+            <button type="button" id="unitFt">ft / in</button>
+          </span>
+        </div>
+
+        <div id="cmMode">
+          <div class="field-head" style="margin-top:-4px;">
+            <span></span>
+            <span class="field-value" id="heightVal">170<span>cm</span></span>
+          </div>
+          <input type="range" id="height" min="100" max="220" value="170" step="1">
+        </div>
+
+        <div id="mMode" style="display:none;">
+          <div class="field-head" style="margin-top:-4px;">
+            <span></span>
+            <span class="field-value" id="heightValM">1.70<span>m</span></span>
+          </div>
+          <input type="range" id="heightM" min="1.00" max="2.20" value="1.70" step="0.01">
+        </div>
+
+        <div id="ftMode" style="display:none;">
+          <div class="field-head" style="margin-top:-4px;">
+            <span></span>
+            <span class="field-value" id="heightValFt">5<span>ft</span> 7<span>in</span> &nbsp;(<span>170</span> cm)</span>
+          </div>
+          <div class="feet-row">
+            <div class="feet-field">
+              <div class="sub-label">Feet</div>
+              <input type="range" id="feet" min="3" max="7" value="5" step="1">
+            </div>
+            <div class="feet-field">
+              <div class="sub-label">Inches</div>
+              <input type="range" id="inches" min="0" max="11" value="7" step="1">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">Weight</span>
+          <span class="field-value" id="weightVal">65<span>kg</span></span>
+        </div>
+        <input type="range" id="weight" min="20" max="180" value="65" step="1">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="result-row">
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">Your BMI</div>
+          <div class="bmi-number" id="bmiNumber">22.5</div>
+        </div>
+        <div class="silhouette-wrap">
+          <svg id="silhouette" viewBox="0 0 60 100" width="44" height="74">
+            <g id="silhouetteBody">
+              <circle cx="30" cy="14" r="10" fill="var(--accent)"></circle>
+              <path d="M 12 32 Q 30 24 48 32 L 52 78 Q 30 88 8 78 Z" fill="var(--accent)"></path>
+            </g>
+          </svg>
+        </div>
+        <div class="bmi-category" id="bmiCategory">Normal</div>
+      </div>
+
+      <div class="ideal-weight" id="idealWeight">Healthy weight for your height: <strong>—</strong></div>
+
+      <div class="gauge">
+        <div class="gauge-track">
+          <div style="width:31.25%; background:var(--z-under);"></div>
+          <div style="width:15.625%; background:var(--z-normal);"></div>
+          <div style="width:15.625%; background:var(--z-over);"></div>
+          <div style="width:37.5%; background:var(--z-obese);"></div>
+          <div class="marker" id="marker"></div>
+        </div>
+        <div class="gauge-ticks">
+          <span>10</span><span>18.5</span><span>25</span><span>30</span><span>40+</span>
+        </div>
+        <div class="gauge-labels">
+          <div>Underweight</div>
+          <div>Normal</div>
+          <div>Overweight</div>
+          <div>Obese</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>BMI = weight (kg) &divide; height&sup2; (m&sup2;) &nbsp;&middot;&nbsp; A general indicator only, not a substitute for medical advice.</footer>
+
+  <div class="section-gap"></div>
+
+  <div class="panel-plain">
+    <div class="panel-plain-head">
+      <div class="eyebrow">Metabolic profile</div>
+      <h2>Daily energy needs</h2>
+    </div>
+
+    <div class="metabolic-grid">
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">Age</span>
+          <span class="field-value" id="ageVal">28<span>yrs</span></span>
+        </div>
+        <input type="range" id="age" min="10" max="90" value="28" step="1">
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">Gender</span>
+        </div>
+        <span class="unit-toggle" style="width:100%;">
+          <button type="button" id="genderMale" class="active" style="flex:1;">Male</button>
+          <button type="button" id="genderFemale" style="flex:1;">Female</button>
+        </span>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">Activity level</span>
+        </div>
+        <select id="activity">
+          <option value="1.2">Sedentary (little or no exercise)</option>
+          <option value="1.375">Light (exercise 1–3 days/week)</option>
+          <option value="1.55" selected>Moderate (exercise 3–5 days/week)</option>
+          <option value="1.725">Active (exercise 6–7 days/week)</option>
+          <option value="1.9">Very active (hard daily exercise)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="metabolic-results">
+      <div class="metabolic-stat">
+        <div class="field-label">BMR</div>
+        <div class="metabolic-number" id="bmrVal">—</div>
+        <div class="metabolic-unit">kcal / day at rest</div>
+      </div>
+      <div class="metabolic-stat">
+        <div class="field-label">Daily calorie need</div>
+        <div class="metabolic-number" id="tdeeVal">—</div>
+        <div class="metabolic-unit">kcal / day, current activity</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <div class="panel-plain">
+    <div class="panel-plain-head">
+      <div>
+        <div class="eyebrow">Progress</div>
+        <h2>BMI history</h2>
+      </div>
+      <button type="button" class="log-btn" id="logBtn">+ Log this reading</button>
+    </div>
+
+    <div id="historyEmpty" class="history-empty">No readings logged yet in this session. Adjust the sliders above, then log a reading to start tracking.</div>
+    <div id="historyChart" class="history-chart" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+  const historyLog = [];
+
+  const heightInput = document.getElementById('height');
+  const weightInput = document.getElementById('weight');
+  const heightVal = document.getElementById('heightVal');
+  const weightVal = document.getElementById('weightVal');
+  const bmiNumber = document.getElementById('bmiNumber');
+  const bmiCategory = document.getElementById('bmiCategory');
+  const marker = document.getElementById('marker');
+  const rulerFill = document.getElementById('rulerFill');
+  const rulerTicks = document.getElementById('rulerTicks');
+  const silhouetteBody = document.getElementById('silhouetteBody');
+  const idealWeight = document.getElementById('idealWeight');
+
+  const ageInput = document.getElementById('age');
+  const ageVal = document.getElementById('ageVal');
+  const genderMaleBtn = document.getElementById('genderMale');
+  const genderFemaleBtn = document.getElementById('genderFemale');
+  const activitySelect = document.getElementById('activity');
+  const bmrVal = document.getElementById('bmrVal');
+  const tdeeVal = document.getElementById('tdeeVal');
+  const logBtn = document.getElementById('logBtn');
+  const historyEmpty = document.getElementById('historyEmpty');
+  const historyChart = document.getElementById('historyChart');
+
+  let gender = 'male';
+
+  const unitCmBtn = document.getElementById('unitCm');
+  const unitMBtn = document.getElementById('unitM');
+  const unitFtBtn = document.getElementById('unitFt');
+  const cmMode = document.getElementById('cmMode');
+  const mMode = document.getElementById('mMode');
+  const ftMode = document.getElementById('ftMode');
+  const heightMInput = document.getElementById('heightM');
+  const heightValM = document.getElementById('heightValM');
+  const feetInput = document.getElementById('feet');
+  const inchesInput = document.getElementById('inches');
+  const heightValFt = document.getElementById('heightValFt');
+
+  let unit = 'cm'; // 'cm', 'm', or 'ft'
+
+  const RULER_MIN = 100, RULER_MAX = 220;
+
+  function ftInToCm(ft, inch){
+    return Math.round(((ft * 12) + inch) * 2.54);
+  }
+
+  function cmToFtIn(cm){
+    const totalInches = cm / 2.54;
+    let ft = Math.floor(totalInches / 12);
+    let inch = Math.round(totalInches - (ft * 12));
+    if(inch === 12){ inch = 0; ft += 1; }
+    return { ft, inch };
+  }
+
+  function getHeightCm(){
+    if(unit === 'cm'){
+      return parseFloat(heightInput.value);
+    } else if(unit === 'm'){
+      return parseFloat(heightMInput.value) * 100;
+    } else {
+      return ftInToCm(parseInt(feetInput.value), parseInt(inchesInput.value));
+    }
+  }
+
+  function setActiveButton(btn){
+    [unitCmBtn, unitMBtn, unitFtBtn].forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function showMode(mode){
+    cmMode.style.display = mode === 'cm' ? '' : 'none';
+    mMode.style.display = mode === 'm' ? '' : 'none';
+    ftMode.style.display = mode === 'ft' ? '' : 'none';
+  }
+
+  unitCmBtn.addEventListener('click', () => {
+    if(unit === 'cm') return;
+    const cm = getHeightCm();
+    unit = 'cm';
+    setActiveButton(unitCmBtn);
+    showMode('cm');
+    heightInput.value = Math.min(RULER_MAX, Math.max(RULER_MIN, cm));
+    update();
+  });
+
+  unitMBtn.addEventListener('click', () => {
+    if(unit === 'm') return;
+    const cm = getHeightCm();
+    unit = 'm';
+    setActiveButton(unitMBtn);
+    showMode('m');
+    heightMInput.value = (Math.min(RULER_MAX, Math.max(RULER_MIN, cm)) / 100).toFixed(2);
+    update();
+  });
+
+  unitFtBtn.addEventListener('click', () => {
+    if(unit === 'ft') return;
+    const cm = getHeightCm();
+    unit = 'ft';
+    setActiveButton(unitFtBtn);
+    showMode('ft');
+    const { ft, inch } = cmToFtIn(cm);
+    feetInput.value = Math.min(7, Math.max(3, ft));
+    inchesInput.value = inch;
+    update();
+  });
+
+  genderMaleBtn.addEventListener('click', () => {
+    gender = 'male';
+    genderMaleBtn.classList.add('active');
+    genderFemaleBtn.classList.remove('active');
+    update();
+  });
+  genderFemaleBtn.addEventListener('click', () => {
+    gender = 'female';
+    genderFemaleBtn.classList.add('active');
+    genderMaleBtn.classList.remove('active');
+    update();
+  });
+  ageInput.addEventListener('input', update);
+  activitySelect.addEventListener('input', update);
+
+  function buildRulerTicks(){
+    rulerTicks.innerHTML = '';
+    for(let v = RULER_MIN; v <= RULER_MAX; v += 5){
+      const pct = (v - RULER_MIN) / (RULER_MAX - RULER_MIN);
+      const fromBottom = pct * 100;
+      const isMajor = v % 20 === 0;
+      const tick = document.createElement('div');
+      tick.className = 'tick ' + (isMajor ? 'major' : 'minor');
+      tick.style.bottom = fromBottom + '%';
+      tick.style.position = 'absolute';
+      tick.innerHTML = '<div class="line"></div>' + (isMajor ? `<div class="label">${v}</div>` : '');
+      rulerTicks.appendChild(tick);
+    }
+  }
+
+  const themeToggle = document.getElementById('themeToggle');
+  const themeLabel = document.getElementById('themeLabel');
+  const themeIcon = document.getElementById('themeIcon');
+
+  const sunIcon = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+  const moonIcon = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+
+  function setTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    themeLabel.textContent = theme === 'dark' ? 'Dark' : 'Light';
+    themeIcon.innerHTML = theme === 'dark' ? moonIcon : sunIcon;
+  }
+
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(prefersDark ? 'dark' : 'light');
+
+  const zoneColors = {
+    'Underweight': 'var(--z-under)',
+    'Normal': 'var(--z-normal)',
+    'Overweight': 'var(--z-over)',
+    'Obese': 'var(--z-obese)'
+  };
+  const zoneBg = {
+    'Underweight': 'var(--z-under-bg)',
+    'Normal': 'var(--z-normal-bg)',
+    'Overweight': 'var(--z-over-bg)',
+    'Obese': 'var(--z-obese-bg)'
+  };
+  function categoryFor(bmi){
+    if(bmi < 18.5) return 'Underweight';
+    if(bmi < 25) return 'Normal';
+    if(bmi < 30) return 'Overweight';
+    return 'Obese';
+  }
+
+  function update(){
+    const h = getHeightCm();
+    const hClamped = Math.min(RULER_MAX, Math.max(RULER_MIN, h));
+    const w = parseFloat(weightInput.value);
+    weightVal.innerHTML = w + '<span>kg</span>';
+
+    if(unit === 'cm'){
+      heightVal.innerHTML = parseFloat(heightInput.value) + '<span>cm</span>';
+    } else if(unit === 'm'){
+      heightValM.innerHTML = parseFloat(heightMInput.value).toFixed(2) + '<span>m</span>';
+    } else {
+      const ft = parseInt(feetInput.value);
+      const inch = parseInt(inchesInput.value);
+      heightValFt.innerHTML = ft + '<span>ft</span> ' + inch + '<span>in</span> &nbsp;(<span>' + ftInToCm(ft, inch) + '</span> cm)';
+    }
+
+    // ruler fill (based on cm, clamped to ruler range)
+    const pct = (hClamped - RULER_MIN) / (RULER_MAX - RULER_MIN);
+    rulerFill.style.height = (pct * 100) + '%';
+
+    const hM = h / 100;
+    const bmi = w / (hM * hM);
+    bmiNumber.textContent = bmi.toFixed(1);
+
+    const cat = categoryFor(bmi);
+    bmiCategory.textContent = cat;
+    bmiCategory.style.color = getComputedStyle(document.documentElement).getPropertyValue(
+      cat === 'Underweight' ? '--z-under' : cat === 'Normal' ? '--z-normal' : cat === 'Overweight' ? '--z-over' : '--z-obese'
+    );
+    bmiCategory.style.background = zoneBg[cat];
+
+    // marker position on gauge, scale 10 to 40+
+    const gaugeMin = 10, gaugeMax = 40;
+    let markerPct = (bmi - gaugeMin) / (gaugeMax - gaugeMin);
+    markerPct = Math.max(0, Math.min(1, markerPct));
+    marker.style.left = (markerPct * 100) + '%';
+
+    // silhouette width scales with BMI (visual only, not to scale)
+    const silScale = Math.max(0.75, Math.min(1.4, bmi / 22.5 * 0.9 + 0.28));
+    silhouetteBody.style.transform = `scaleX(${silScale.toFixed(2)})`;
+
+    // ideal weight range for a Normal BMI (18.5–24.9) at this height
+    const minW = (18.5 * hM * hM).toFixed(1);
+    const maxW = (24.9 * hM * hM).toFixed(1);
+    idealWeight.innerHTML = `Healthy weight for your height: <strong>${minW}–${maxW} kg</strong>`;
+
+    // BMR (Mifflin-St Jeor) + TDEE
+    const age = parseFloat(ageInput.value);
+    ageVal.innerHTML = age + '<span>yrs</span>';
+    let bmr = 10 * w + 6.25 * h - 5 * age + (gender === 'male' ? 5 : -161);
+    bmr = Math.max(0, bmr);
+    const activityFactor = parseFloat(activitySelect.value);
+    const tdee = bmr * activityFactor;
+    bmrVal.textContent = Math.round(bmr).toLocaleString();
+    tdeeVal.textContent = Math.round(tdee).toLocaleString();
+
+    return bmi;
+  }
+
+  logBtn.addEventListener('click', () => {
+    const bmi = parseFloat(bmiNumber.textContent);
+    const cat = bmiCategory.textContent;
+    historyLog.push({ bmi, cat, n: historyLog.length + 1 });
+    renderHistory();
+  });
+
+  function renderHistory(){
+    if(historyLog.length === 0){
+      historyEmpty.style.display = '';
+      historyChart.style.display = 'none';
+      return;
+    }
+    historyEmpty.style.display = 'none';
+    historyChart.style.display = 'flex';
+    historyChart.innerHTML = '';
+
+    const recent = historyLog.slice(-12);
+    const maxBmi = Math.max(40, ...recent.map(r => r.bmi));
+    const minBmi = 10;
+
+    recent.forEach(r => {
+      const heightPct = Math.max(4, ((r.bmi - minBmi) / (maxBmi - minBmi)) * 100);
+      const wrap = document.createElement('div');
+      wrap.className = 'history-bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'history-bar';
+      bar.style.height = heightPct + '%';
+      bar.style.background = getComputedStyle(document.documentElement).getPropertyValue(
+        r.cat === 'Underweight' ? '--z-under' : r.cat === 'Normal' ? '--z-normal' : r.cat === 'Overweight' ? '--z-over' : '--z-obese'
+      );
+      bar.title = `Reading ${r.n}: BMI ${r.bmi.toFixed(1)} (${r.cat})`;
+      const label = document.createElement('div');
+      label.className = 'history-bar-label';
+      label.textContent = '#' + r.n;
+      wrap.appendChild(bar);
+      wrap.appendChild(label);
+      historyChart.appendChild(wrap);
+    });
+  }
+
+  heightInput.addEventListener('input', update);
+  heightMInput.addEventListener('input', update);
+  weightInput.addEventListener('input', update);
+  feetInput.addEventListener('input', update);
+  inchesInput.addEventListener('input', update);
+
+  buildRulerTicks();
+  update();
+</script>
+</body>
+</html>
